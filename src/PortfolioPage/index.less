@@ -32,8 +32,9 @@
   -webkit-backdrop-filter: blur(10px);
   position: sticky;
   top: 24px;
-  max-height: 400px;
-  //   height: calc(100vh - 48px);
+  height: auto;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
   border-radius: var(--border-radius);
   box-shadow: var(--shadow);
   display: flex;
@@ -69,6 +70,20 @@
     margin-bottom: 15px;
   }
 
+  .sidebar-model {
+    margin: 8px 0 15px;
+    width: 180px;
+    height: 180px;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.02);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+
+    &:hover {
+      /* 删除缩放效果 */
+    }
+  }
+
   .sidebar-nav {
     display: flex;
     flex-direction: column;
@@ -93,6 +108,18 @@
         background-color: var(--accent-color);
         color: white;
       }
+    }
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    text-align: center;
+    opacity: 0.7;
+    font-size: 12px;
+
+    &:hover {
+      opacity: 1;
     }
   }
 }
@@ -162,6 +189,12 @@
       .sidebar-avatar {
         width: 70px;
         height: 70px;
+      }
+
+      .sidebar-model {
+        width: 150px;
+        height: 150px;
+        margin: 8px auto 12px;
       }
 
       .sidebar-nav {

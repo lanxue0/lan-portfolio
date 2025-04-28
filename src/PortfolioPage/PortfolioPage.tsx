@@ -1,10 +1,18 @@
 import { useRef } from "react";
 import { Avatar, Card, Divider, Tag, Typography } from "antd";
-import { UserOutlined, MailOutlined, GithubOutlined } from "@ant-design/icons";
+import {
+  UserOutlined,
+  MailOutlined,
+  GithubOutlined,
+  CopyrightOutlined,
+} from "@ant-design/icons";
 import "./index.less";
-import DynamicBackground from "./DynamicBackground";
+import DynamicBackground from "../components/DynamicBackground";
+import ThreeSVG from "../components/ThreeSVG";
+// 导入SVG资源
+import chinaMapPath from "../assets/china.svg";
 
-const { Title, Paragraph } = Typography;
+const { Title, Paragraph, Text } = Typography;
 
 const PortfolioPage = () => {
   // 滚动导航引用
@@ -36,6 +44,11 @@ const PortfolioPage = () => {
         <div className="sidebar-name">lan</div>
         <div className="sidebar-title">前端开发工程师</div>
 
+        {/* 模型展示 */}
+        <div className="sidebar-model">
+          <ThreeSVG width={180} height={180} svgPath={chinaMapPath} />
+        </div>
+
         <Divider style={{ margin: "12px 0" }} />
 
         {/* 导航 */}
@@ -61,6 +74,11 @@ const PortfolioPage = () => {
           >
             联系
           </button>
+        </div>
+        <div className="sidebar-footer">
+          <Text type="secondary" style={{ fontSize: "12px" }}>
+            <CopyrightOutlined /> {new Date().getFullYear()} lan
+          </Text>
         </div>
       </div>
 
