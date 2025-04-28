@@ -5,6 +5,7 @@ import {
   MailOutlined,
   GithubOutlined,
   CopyrightOutlined,
+  EnvironmentOutlined,
 } from "@ant-design/icons";
 import "./index.less";
 import DynamicBackground from "../components/DynamicBackground";
@@ -22,6 +23,9 @@ const PortfolioPage = () => {
   const skillsRef = useRef<HTMLDivElement>(null);
   const projectsRef = useRef<HTMLDivElement>(null);
   const contactRef = useRef<HTMLDivElement>(null);
+
+  // 当前位置
+  const currentLocation = "湖北";
 
   // 滚动到指定区域
   const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>) => {
@@ -46,9 +50,20 @@ const PortfolioPage = () => {
         <div className="sidebar-name">lan</div>
         <div className="sidebar-title">前端开发工程师</div>
 
+        {/* 当前位置 */}
+        <div className="sidebar-location">
+          <EnvironmentOutlined style={{ marginRight: 5, color: "#ff4d4f" }} />
+          <Text>{currentLocation}</Text>
+        </div>
+
         {/* 模型展示 */}
         <div className="sidebar-model">
-          <ThreeSVG width={180} height={180} svgPath={chinaMapPath} />
+          <ThreeSVG
+            width={180}
+            height={180}
+            svgPath={chinaMapPath}
+            highlightLocation={currentLocation}
+          />
         </div>
 
         <Divider style={{ margin: "12px 0" }} />

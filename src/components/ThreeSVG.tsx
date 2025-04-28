@@ -7,12 +7,14 @@ interface ThreeSVGProps {
   width?: number;
   height?: number;
   svgPath: string;
+  highlightLocation?: string;
 }
 
 const ThreeSVG: React.FC<ThreeSVGProps> = ({
   width = 200,
   height = 200,
   svgPath,
+  highlightLocation,
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{
@@ -302,7 +304,69 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
               camera.lookAt(center);
             };
 
-            fitCameraToObject(camera, svgGroup, 1.2);
+            // 查找需要高亮的位置模型
+            const highlightLocationModel = interactiveModels.find((model) => {
+              if (!model.title || !highlightLocation) return false;
+              const title = model.title.toLowerCase();
+              const location = highlightLocation.toLowerCase();
+              // 检查多种可能的名称格式
+              return title.includes(location) || title === location;
+            });
+
+            // 如果有指定的高亮位置，优先使用，否则默认高亮湖北
+            const targetModel =
+              highlightLocationModel ||
+              interactiveModels.find((model) => {
+                if (!model.title) return false;
+                const title = model.title.toLowerCase();
+                // 检查多种可能的名称格式
+                return (
+                  title.includes("hubei") ||
+                  title.includes("湖北") ||
+                  title === "hubei" ||
+                  title === "湖北"
+                );
+              });
+
+            if (targetModel) {
+              // 如果找到目标模型，让相机聚焦在它上面
+              const targetMesh = targetModel.mesh;
+              const boundingBox = new THREE.Box3().setFromObject(targetMesh);
+              const center = boundingBox.getCenter(new THREE.Vector3());
+
+              // 计算适当的相机距离
+              const size = boundingBox.getSize(new THREE.Vector3());
+              const maxDim = Math.max(size.x, size.y, size.z) * 2.5;
+              const fov = camera.fov * (Math.PI / 180);
+              const cameraZ = Math.abs(maxDim / Math.sin(fov / 2));
+
+              // 设置相机位置和朝向
+              camera.position.z = cameraZ;
+
+              // 应用偏移以确保Hubei在画布中心
+              // 调整SVG组整体位置，使Hubei居中
+              svgGroup.position.x = -center.x;
+              svgGroup.position.y = -center.y;
+
+              // 重新设置相机看向原点(0,0,0)而不是模型中心，因为我们已经移动了模型
+              camera.lookAt(0, 0, 0);
+
+              // 设置控制器的目标为原点
+              if (controlsRef.current) {
+                controlsRef.current.target.set(0, 0, 0);
+                controlsRef.current.update();
+              }
+
+              // 高亮目标省份
+              originalMaterial = targetMesh.material as THREE.Material;
+              targetMesh.material = highlightMaterial;
+              targetModel.border.material = borderHighlightMaterial;
+              highlightedMesh = targetMesh;
+              highlightedBorder = targetModel.border;
+            } else {
+              // 如果没找到，则聚焦整个SVG组
+              fitCameraToObject(camera, svgGroup, 1.2);
+            }
 
             // 添加OrbitControls用于鼠标交互
             const controls = new OrbitControls(camera, renderer.domElement);
@@ -473,7 +537,7 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
         }
       });
     };
-  }, [width, height, svgPath]);
+  }, [width, height, svgPath, highlightLocation]);
 
   return (
     <div
@@ -483,6 +547,7 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
         height: `${height}px`,
         margin: "0 auto",
         position: "relative",
+        overflow: "hidden",
       }}
     >
       {tooltip.show && (
