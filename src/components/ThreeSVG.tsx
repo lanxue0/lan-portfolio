@@ -29,6 +29,15 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
     y: 0,
   });
 
+  // 增加一个引用来存储固定高亮的模型
+  const fixedHighlightedRef = useRef<{
+    mesh: THREE.Mesh | null;
+    border: THREE.LineSegments | null;
+  }>({
+    mesh: null,
+    border: null,
+  });
+
   useEffect(() => {
     if (!mountRef.current || !svgPath) return;
 
@@ -63,6 +72,21 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
     // 边框高亮材质
     const borderHighlightMaterial = new THREE.LineBasicMaterial({
       color: 0xff0000, // 红色高亮边框
+      linewidth: 2,
+    });
+
+    // 创建固定高亮材质 - 使用不同色调以区分鼠标悬停
+    const fixedHighlightMaterial = new THREE.MeshPhongMaterial({
+      color: new THREE.Color(0xff4500), // 橙红色高亮
+      emissive: new THREE.Color(0x331100), // 轻微自发光效果
+      shininess: 100,
+      flatShading: true,
+      side: THREE.DoubleSide,
+    });
+
+    // 固定高亮边框材质
+    const fixedBorderHighlightMaterial = new THREE.LineBasicMaterial({
+      color: 0xff4500, // 橙红色高亮边框
       linewidth: 2,
     });
 
@@ -343,8 +367,8 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
               // 设置相机位置和朝向
               camera.position.z = cameraZ;
 
-              // 应用偏移以确保Hubei在画布中心
-              // 调整SVG组整体位置，使Hubei居中
+              // 应用偏移以确保目标在画布中心
+              // 调整SVG组整体位置，使目标模型居中
               svgGroup.position.x = -center.x;
               svgGroup.position.y = -center.y;
 
@@ -358,11 +382,14 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
               }
 
               // 高亮目标省份
-              originalMaterial = targetMesh.material as THREE.Material;
-              targetMesh.material = highlightMaterial;
-              targetModel.border.material = borderHighlightMaterial;
-              highlightedMesh = targetMesh;
-              highlightedBorder = targetModel.border;
+              targetMesh.material = fixedHighlightMaterial;
+              targetModel.border.material = fixedBorderHighlightMaterial;
+
+              // 存储固定高亮的模型引用
+              fixedHighlightedRef.current = {
+                mesh: targetMesh,
+                border: targetModel.border,
+              };
             } else {
               // 如果没找到，则聚焦整个SVG组
               fitCameraToObject(camera, svgGroup, 1.2);
@@ -436,8 +463,13 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
       // 检测与网格的相交
       const intersects = raycaster.intersectObjects(meshes, false);
 
-      // 如果之前有高亮对象，恢复其原始材质
-      if (highlightedMesh && originalMaterial && highlightedBorder) {
+      // 如果之前有鼠标悬停高亮对象（不是固定高亮的），恢复其原始材质
+      if (
+        highlightedMesh &&
+        originalMaterial &&
+        highlightedBorder &&
+        highlightedMesh !== fixedHighlightedRef.current.mesh
+      ) {
         highlightedMesh.material = originalMaterial;
         highlightedBorder.material = new THREE.LineBasicMaterial({
           color: 0x4fc3f7, // 恢复默认边框颜色
@@ -458,13 +490,16 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
         const modelPair = interactiveModels.find((item) => item.mesh === mesh);
 
         if (modelPair) {
-          highlightedMesh = modelPair.mesh;
-          highlightedBorder = modelPair.border;
-          originalMaterial = mesh.material as THREE.Material;
+          // 如果鼠标悬停的不是固定高亮的模型，则应用悬停高亮
+          if (modelPair.mesh !== fixedHighlightedRef.current.mesh) {
+            highlightedMesh = modelPair.mesh;
+            highlightedBorder = modelPair.border;
+            originalMaterial = mesh.material as THREE.Material;
 
-          // 高亮模型和边框
-          highlightedMesh.material = highlightMaterial;
-          highlightedBorder.material = borderHighlightMaterial;
+            // 高亮模型和边框
+            highlightedMesh.material = highlightMaterial;
+            highlightedBorder.material = borderHighlightMaterial;
+          }
 
           // 显示标题提示框
           setTooltip({
