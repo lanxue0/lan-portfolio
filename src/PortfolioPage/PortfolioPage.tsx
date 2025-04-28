@@ -9,8 +9,10 @@ import {
 import "./index.less";
 import DynamicBackground from "../components/DynamicBackground";
 import ThreeSVG from "../components/ThreeSVG";
+
 // 导入SVG资源
 import chinaMapPath from "../assets/china.svg";
+import AiIntroduction from "../components/AiIntroduction";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -96,6 +98,9 @@ const PortfolioPage = () => {
               <Paragraph>前端开发工程师。</Paragraph>
               <Paragraph>技术栈：React, WebGL, Three.js等。</Paragraph>
             </Card>
+
+            {/* AI自我介绍 */}
+            <AiIntroduction />
           </div>
 
           {/* 技能 */}
