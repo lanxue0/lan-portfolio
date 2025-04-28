@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
-import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 interface ThreeSVGProps {
@@ -30,6 +29,30 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
     // 创建一个控制器引用，用于在不同函数间共享
     const controlsRef = { current: null as OrbitControls | null };
 
+    // 用于鼠标交互的射线投射器
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    // 存储当前高亮的对象和其原始材质
+    let highlightedMesh: THREE.Mesh | null = null;
+    let originalMaterial: THREE.Material | null = null;
+    let highlightedBorder: THREE.LineSegments | null = null;
+
+    // 创建高亮材质
+    const highlightMaterial = new THREE.MeshPhongMaterial({
+      color: new THREE.Color(0xff0000), // 红色高亮
+      emissive: new THREE.Color(0x331111), // 轻微自发光效果
+      shininess: 100,
+      flatShading: true,
+      side: THREE.DoubleSide,
+    });
+
+    // 边框高亮材质
+    const borderHighlightMaterial = new THREE.LineBasicMaterial({
+      color: 0xff0000, // 红色高亮边框
+      linewidth: 2,
+    });
+
     renderer.setSize(width, height);
     renderer.setClearColor(0x000000, 0);
     mountRef.current.appendChild(renderer.domElement);
@@ -45,6 +68,12 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
     // 创建一个组来存放SVG内容
     const svgGroup = new THREE.Group();
     scene.add(svgGroup);
+
+    // 存储可交互的网格和边框对
+    const interactiveModels: {
+      mesh: THREE.Mesh;
+      border: THREE.LineSegments;
+    }[] = [];
 
     // 加载SVG
     const loader = new SVGLoader();
@@ -77,12 +106,9 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
         const svgHeight = maxY - minY;
 
         // 计算适当的缩放比例和居中偏移
-        const scale = Math.min(8 / svgWidth, 8 / svgHeight);
+        const scale = Math.min(6 / svgWidth, 6 / svgHeight);
         const centerX = (minX + maxX) / 2;
         const centerY = (minY + maxY) / 2;
-
-        // 遍历所有路径前先创建边框几何体集合
-        const borderGeometries: THREE.BufferGeometry[] = [];
 
         paths.forEach((path) => {
           const fillColor = path.userData?.style.fill;
@@ -104,9 +130,6 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
                 bevelEnabled: false,
               });
 
-              // 保存几何体用于边框
-              borderGeometries.push(geometry.clone());
-
               const mesh = new THREE.Mesh(geometry, material);
 
               // 中心化处理
@@ -120,7 +143,30 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
               mesh.rotation.x = -Math.PI * 0.01;
               mesh.rotation.y = Math.PI * 0.01;
 
+              // 创建边框
+              const edgesGeometry = new THREE.EdgesGeometry(geometry);
+              const borderMaterial = new THREE.LineBasicMaterial({
+                color: 0x4fc3f7, // 亮蓝色边框
+                linewidth: 2,
+              });
+              const border = new THREE.LineSegments(
+                edgesGeometry,
+                borderMaterial
+              );
+
+              // 应用与模型相同的变换
+              border.position.copy(mesh.position);
+              border.rotation.copy(mesh.rotation);
+              border.scale.copy(mesh.scale);
+
+              // 略微偏移，避免z-fighting
+              border.position.z += 0.01;
+
+              // 将网格和边框存储为一对
+              interactiveModels.push({ mesh, border });
+
               svgGroup.add(mesh);
+              svgGroup.add(border);
             });
           }
 
@@ -147,35 +193,6 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
             }
           }
         });
-
-        // 添加边框效果
-        if (borderGeometries.length > 0) {
-          // 合并所有几何体
-          const mergeGeometry =
-            BufferGeometryUtils.mergeGeometries(borderGeometries);
-
-          if (mergeGeometry) {
-            const edges = new THREE.EdgesGeometry(mergeGeometry);
-            const borderMaterial = new THREE.LineBasicMaterial({
-              color: 0x4fc3f7, // 亮蓝色边框
-              linewidth: 2,
-            });
-
-            const borderLine = new THREE.LineSegments(edges, borderMaterial);
-
-            // 应用与模型相同的变换
-            borderLine.position.x = -centerX * scale;
-            borderLine.position.y = -centerY * scale;
-            borderLine.scale.set(scale, -scale, scale);
-            borderLine.rotation.x = -Math.PI * 0.01;
-            borderLine.rotation.y = Math.PI * 0.01;
-
-            // 略微偏移，避免z-fighting
-            borderLine.position.z = 0.01;
-
-            svgGroup.add(borderLine);
-          }
-        }
 
         // 设置相机位置
         camera.position.set(0, 0, 5);
@@ -211,7 +228,7 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
           camera.updateProjectionMatrix();
 
           // 让相机看向中心点
-          //   camera.lookAt(center);
+          camera.lookAt(center);
         };
 
         fitCameraToObject(camera, svgGroup, 1.2);
@@ -249,6 +266,68 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
       }
     );
 
+    // 鼠标移动处理函数
+    const onMouseMove = (event: MouseEvent) => {
+      if (!mountRef.current) return;
+
+      // 计算鼠标在归一化设备坐标中的位置
+      const rect = mountRef.current.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / height) * 2 + 1;
+
+      // 设置射线投射器
+      raycaster.setFromCamera(mouse, camera);
+
+      // 获取所有网格用于检测
+      const meshes = interactiveModels.map((item) => item.mesh);
+
+      // 检测与网格的相交
+      const intersects = raycaster.intersectObjects(meshes, false);
+
+      // 如果之前有高亮对象，恢复其原始材质
+      if (highlightedMesh && originalMaterial && highlightedBorder) {
+        highlightedMesh.material = originalMaterial;
+        highlightedBorder.material = new THREE.LineBasicMaterial({
+          color: 0x4fc3f7, // 恢复默认边框颜色
+          linewidth: 2,
+        });
+        highlightedMesh = null;
+        originalMaterial = null;
+        highlightedBorder = null;
+      }
+
+      // 高亮鼠标悬停的模型
+      if (intersects.length > 0) {
+        const mesh = intersects[0].object as THREE.Mesh;
+
+        // 找到对应的边框
+        const modelPair = interactiveModels.find((item) => item.mesh === mesh);
+
+        if (modelPair) {
+          highlightedMesh = modelPair.mesh;
+          highlightedBorder = modelPair.border;
+          originalMaterial = mesh.material as THREE.Material;
+
+          // 高亮模型和边框
+          highlightedMesh.material = highlightMaterial;
+          highlightedBorder.material = borderHighlightMaterial;
+
+          // 添加鼠标指针样式
+          if (mountRef.current) {
+            mountRef.current.style.cursor = "pointer";
+          }
+        }
+      } else {
+        // 无交集时恢复默认指针
+        if (mountRef.current) {
+          mountRef.current.style.cursor = "default";
+        }
+      }
+    };
+
+    // 添加鼠标移动事件监听器
+    mountRef.current.addEventListener("mousemove", onMouseMove);
+
     // 简单的动画效果
     const animate = () => {
       requestAnimationFrame(animate);
@@ -273,6 +352,7 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
     return () => {
       if (mountRef.current) {
         mountRef.current.removeChild(renderer.domElement);
+        mountRef.current.removeEventListener("mousemove", onMouseMove);
       }
       window.removeEventListener("resize", handleResize);
 
