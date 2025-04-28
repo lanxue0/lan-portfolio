@@ -2,34 +2,44 @@
 :root {
   --background-light: #f8f8f8;
   --background-white: #fff;
-  --primary-color: #333;
+  --primary-color: #1890ff;
   --secondary-color: #666;
   --accent-color: #0077ff;
   --border-color: #eaeaea;
-  --shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
-  --border-radius: 4px;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --border-radius: 8px;
+  --text-color: #333;
+  --bg-color: rgba(255, 255, 255, 0.8);
 }
 
 .portfolio {
+  display: flex;
   width: 90%;
   max-width: 1200px;
   margin: 0 auto;
-  display: flex;
+  min-height: 100vh;
+  padding: 24px 0;
   position: relative;
-  padding: 20px 0;
+  z-index: 1;
 }
 
 /* 左侧固定区域 */
 .portfolio-sidebar {
-  width: 220px;
+  width: 240px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   position: sticky;
-  top: 20px;
-  align-self: flex-start;
-  margin-right: 20px;
-  background-color: var(--background-white);
+  top: 24px;
+  max-height: 400px;
+  //   height: calc(100vh - 48px);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow);
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 24px;
 
   .sidebar-avatar {
     width: 100px;
@@ -92,39 +102,33 @@
   flex: 1;
 
   .content-list {
-    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 
     .content-card {
-      width: 100%;
-      margin-bottom: 15px;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      transition: transform 0.3s ease;
+      box-shadow: var(--shadow);
 
-      &:last-child {
-        margin-bottom: 0;
+      &:hover {
+        transform: translateY(-5px);
       }
 
-      //样式覆盖
       .ant-card-custom {
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow);
-        overflow: hidden;
-        border: none;
+        background: transparent;
 
         .ant-card-head {
-          padding: 0 15px;
-          min-height: 45px;
-          font-size: 1.1rem;
-          border-bottom: 1px solid var(--border-color);
-          background-color: #f9f9f9;
-
-          .ant-card-head-title {
-            padding: 12px 0;
-          }
+          background: rgba(255, 255, 255, 0.9);
+          border-bottom: 1px solid rgba(0, 0, 0, 0.06);
         }
 
         .ant-card-body {
-          padding: 15px;
-          color: var(--secondary-color);
-          line-height: 1.5;
+          background: transparent;
         }
       }
 
@@ -141,32 +145,34 @@
 }
 
 /* 响应式 */
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   .portfolio {
-    width: 95%;
     flex-direction: column;
-  }
+    width: 95%;
+    padding: 16px 0;
 
-  .portfolio-sidebar {
-    width: 100%;
-    position: relative;
-    top: 0;
-    margin-right: 0;
-    margin-bottom: 20px;
-    padding: 15px;
+    &-sidebar {
+      position: relative;
+      width: 100%;
+      top: 0;
+      margin-right: 0;
+      margin-bottom: 24px;
+      padding: 16px;
 
-    .sidebar-avatar {
-      width: 70px;
-      height: 70px;
-    }
+      .sidebar-avatar {
+        width: 70px;
+        height: 70px;
+      }
 
-    .sidebar-nav {
-      flex-direction: row;
-      flex-wrap: wrap;
-      justify-content: center;
+      .sidebar-nav {
+        flex-direction: row;
+        justify-content: center;
+        width: 100%;
+        margin-top: 12px;
 
-      .nav-btn {
-        padding: 6px 12px;
+        .nav-btn {
+          margin: 0 8px;
+        }
       }
     }
   }

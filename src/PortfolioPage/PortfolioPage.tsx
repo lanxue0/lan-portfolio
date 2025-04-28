@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Avatar, Card, Divider, Tag, Typography } from "antd";
 import { UserOutlined, MailOutlined, GithubOutlined } from "@ant-design/icons";
 import "./index.less";
+import DynamicBackground from "./DynamicBackground";
 
 const { Title, Paragraph } = Typography;
 
@@ -19,6 +20,14 @@ const PortfolioPage = () => {
 
   return (
     <div className="portfolio">
+      {/* 动态背景 */}
+      <DynamicBackground
+        pointsCount={80}
+        lineDistance={150}
+        pointRadius={2}
+        speed={0.3}
+      />
+
       {/* 左侧固定区域 */}
       <div className="portfolio-sidebar">
         <div className="sidebar-avatar">
