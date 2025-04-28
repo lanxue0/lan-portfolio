@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
 import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 interface ThreeSVGProps {
   width?: number;
@@ -26,6 +27,8 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
       antialias: true,
       alpha: true,
     });
+    // 创建一个控制器引用，用于在不同函数间共享
+    const controlsRef = { current: null as OrbitControls | null };
 
     renderer.setSize(width, height);
     renderer.setClearColor(0x000000, 0);
@@ -74,7 +77,7 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
         const svgHeight = maxY - minY;
 
         // 计算适当的缩放比例和居中偏移
-        const scale = Math.min(6 / svgWidth, 6 / svgHeight);
+        const scale = Math.min(8 / svgWidth, 8 / svgHeight);
         const centerX = (minX + maxX) / 2;
         const centerY = (minY + maxY) / 2;
 
@@ -178,7 +181,7 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
         camera.position.set(0, 0, 5);
         camera.lookAt(0, 0, 0);
 
-        // 在SVG加载和处理完毕后，执行自动适应布局
+        // 在SVG加载后添加适当的控件配置
         const fitCameraToObject = (
           camera: THREE.PerspectiveCamera,
           object: THREE.Object3D,
@@ -208,10 +211,37 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
           camera.updateProjectionMatrix();
 
           // 让相机看向中心点
-          camera.lookAt(center);
+          //   camera.lookAt(center);
         };
 
-        fitCameraToObject(camera, svgGroup, 1.0);
+        fitCameraToObject(camera, svgGroup, 1.2);
+
+        // 添加OrbitControls用于鼠标交互
+        const controls = new OrbitControls(camera, renderer.domElement);
+        // 基本设置
+        controls.enableDamping = true; // 添加阻尼效果
+        controls.dampingFactor = 0.1;
+        controls.screenSpacePanning = true; // 屏幕空间平移
+        controls.panSpeed = 0.8; // 平移速度
+        controls.zoomSpeed = 1.2; // 缩放速度
+
+        // 限制缩放范围
+        controls.minDistance = 2; // 允许更近的缩放
+        controls.maxDistance = 15;
+
+        // 禁用不需要的功能
+        controls.enableRotate = false; // 禁用旋转
+        controls.autoRotate = false;
+
+        // 限制平移范围，防止用户将SVG完全移出视野
+        controls.maxPolarAngle = Math.PI / 2; // 限制上下平移
+        controls.minPolarAngle = Math.PI / 2;
+
+        // 应用初始设置
+        controls.update();
+
+        // 保存到引用中，供其他函数使用
+        controlsRef.current = controls;
       },
       undefined,
       (error) => {
@@ -222,6 +252,9 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
     // 简单的动画效果
     const animate = () => {
       requestAnimationFrame(animate);
+      if (controlsRef.current) {
+        controlsRef.current.update(); // 更新controls以实现阻尼效果
+      }
       renderer.render(scene, camera);
     };
 
@@ -242,6 +275,11 @@ const ThreeSVG: React.FC<ThreeSVGProps> = ({
         mountRef.current.removeChild(renderer.domElement);
       }
       window.removeEventListener("resize", handleResize);
+
+      // 清理controls
+      if (controlsRef.current) {
+        controlsRef.current.dispose();
+      }
 
       // 清理资源
       svgGroup.traverse((object) => {
